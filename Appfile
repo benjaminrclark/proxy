@@ -1,0 +1,6 @@
+{
+  "application": {
+    "name": "proxy",
+    "type": "custom"
+  }
+}

@@ -1,0 +1,41 @@
+job "<%=ENV['APP_NAME'] %>-job" {
+    region = "<%=ENV['REGION'] %>"
+    datacenters = [<% ENV['DATACENTERS'].split(',').each_with_index do |datacenter,index| %><% if index > 0 %>,<% end %>"<%=datacenter %>"<% end %>]
+    type = "service"
+    group "<%=ENV['APP_NAME'] %>-group" {
+        count = 2 
+        task "<%=ENV['APP_NAME'] %>-task" {
+            driver = "raw_exec"
+            config {
+                command = "/usr/bin/docker"
+                args = ["run", "--net=host", "traefik",  "--consulCatalog", "--entryPoints='Name:http Address:0.0.0.0:8080'","--entryPoints='Name:https Address:0.0.0.0:8443'","--defaultEntryPoints=http","--web", "--web.address=${NOMAD_IP_traefikMonitoring}:8081"]
+            }
+            env {
+                NODE = "${node.unique.name}"
+                GIT_SHORT_COMMIT = "<%=ENV['GIT_SHORT_COMMIT'] %>" 
+                GIT_BRANCH =  "<%=ENV['GIT_BRANCH'] %>"
+            }
+            service {
+                name = "<%=ENV['APP_NAME'] %>"
+                tags = ["traefik.enable=false"]
+                port = "traefikMonitoring"
+            }
+            resources {
+                cpu = 500
+                memory = 128
+                network {
+                    mbits = 100
+                    port "traefikHttp" {
+                      static = 8080
+                    }
+                    port "traefikMonitoring" {
+                      static = "8081"
+                    }
+                    port "traefikHttps" {
+                      static = 8443
+                    }
+                }
+            }
+        }
+    }
+}
